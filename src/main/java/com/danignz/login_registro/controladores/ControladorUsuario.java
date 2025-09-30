@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import com.danignz.login_registro.modelos.Usuario;
 import com.danignz.login_registro.servicios.ServicioUsuario;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 @Controller
@@ -27,7 +28,7 @@ public class ControladorUsuario {
     @PostMapping("/procesa/registro")
     public String procesarRegistro(@Valid @ModelAttribute("usuario") Usuario usuario,
         BindingResult result,
-        Model modelo) {
+        Model modelo, HttpSession session) {
 
         if (servicioUsuario.existeUsuario(usuario.getNombreUsuario())) {
             result.rejectValue("nombreUsuario", "error.usuario", "Nombre de usuario ya existe");
@@ -44,12 +45,19 @@ public class ControladorUsuario {
 
         servicioUsuario.guardarUsuario(usuario);
 
+        session.setAttribute("id", usuario.getId());
+        session.setAttribute("correo", usuario.getCorreo());
+        session.setAttribute("nombreUsuario", usuario.getNombreUsuario());
+        session.setAttribute("nombre", usuario.getNombre());
+        session.setAttribute("apellido", usuario.getApellido());
+        session.setAttribute("fechaDeNacimiento", usuario.getFechaDeNacimiento());
+
         return "redirect:/inicio";
     }
     
    @PostMapping("/procesa/login")
 public String procesarLogin(@ModelAttribute("login") Usuario login,
-                            Model modelo) {
+                            Model modelo, HttpSession session) {
     Usuario usuarioBD = servicioUsuario.buscarPorCorreo(login.getCorreo());
 
     if (usuarioBD == null || !servicioUsuario.verificarContrasena(login.getContrasena(), usuarioBD.getContrasena())) {
@@ -57,13 +65,30 @@ public String procesarLogin(@ModelAttribute("login") Usuario login,
         modelo.addAttribute("usuario", new Usuario());
         return "index";
     }
+        session.setAttribute("id", usuarioBD.getId());
+        session.setAttribute("correo", usuarioBD.getCorreo());
+        session.setAttribute("nombreUsuario", usuarioBD.getNombreUsuario());
+        session.setAttribute("nombre", usuarioBD.getNombre());
+        session.setAttribute("apellido", usuarioBD.getApellido());
+        session.setAttribute("fechaDeNacimiento", usuarioBD.getFechaDeNacimiento());
+
 
     return "redirect:/inicio";
 }
 
     @GetMapping("/inicio")
-    public String mostrarInicio() {
-        return "inicio";
+    public String mostrarInicio(HttpSession session) {
+      if (session.getAttribute("id")==null) {
+        return"redirect:/";
+      }
+      return "inicio";
     }
+
+    @PostMapping("/procesa/logout")
+    public String cerrarSesion(HttpSession session){
+        session.invalidate();
+        return"redirect:/";
+    }
+    
 }
 
